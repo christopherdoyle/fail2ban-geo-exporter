@@ -1,4 +1,3 @@
-import configparser
 from collections import defaultdict
 from dataclasses import dataclass, field
 from wsgiref.simple_server import make_server
@@ -6,6 +5,7 @@ from wsgiref.simple_server import make_server
 from prometheus_client import make_wsgi_app
 from prometheus_client.core import REGISTRY, GaugeMetricFamily
 
+from . import fail2ban_configs
 from .config import Settings
 from .fail2ban_db import Fail2BanDatabaseInterface
 
@@ -40,14 +40,11 @@ class F2bCollector:
     def get_jailed_ips(self):
         self.jails.clear()
 
-        config = configparser.ConfigParser()
-        config.read(f"{self.settings.fail2ban.conf_path}/jail.local")
-        jaild = list((self.settings.fail2ban.conf_path / "jail.d").glob("*.local"))
-        config.read(jaild)
+        config = fail2ban_configs.read(self.settings.fail2ban.conf_path)
 
         with Fail2BanDatabaseInterface(self.settings.fail2ban.db_path) as db:
             for jail_name in db.fetch_active_jails():
-                bantime = int(config[jail_name]["bantime"].split(";")[0].strip())
+                bantime = fail2ban_configs.read_jail_bantime(config, jail_name)
                 jail = Jail(
                     name=jail_name,
                     ip_list=db.fetch_banned_ips(jail_name, bantime),
