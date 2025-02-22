@@ -1,6 +1,7 @@
 import configparser
 import sqlite3
 from collections import defaultdict
+from dataclasses import dataclass, field
 from pathlib import Path
 from wsgiref.simple_server import make_server
 
@@ -9,14 +10,14 @@ from prometheus_client import make_wsgi_app
 from prometheus_client.core import REGISTRY, GaugeMetricFamily
 
 
+@dataclass(slots=True)
 class Jail:
-    def __init__(self, name):
-        self.name = name
-        self.ip_list = []
-        self.bantime = 0
+    name: str
+    ip_list: list[str] = field(default_factory=list)
+    bantime: int = 0
 
 
-class F2bCollector(object):
+class F2bCollector:
     def __init__(self, conf):
         self.geo_provider = self._import_provider(conf)
         self.f2b_conf = conf["f2b"].get("conf", "")
@@ -24,6 +25,7 @@ class F2bCollector(object):
         self.f2b_db = conf["f2b"]["db"]
         self.jails = []
         self.extra_labels = sorted(self.geo_provider.get_labels())
+        self.enable_grouping = conf["geo"]["enable_grouping"]
 
     def _import_provider(self, conf):
         if conf["geo"]["enabled"]:
@@ -87,7 +89,7 @@ class F2bCollector(object):
         self.get_jailed_ips()
         self.assign_location()
 
-        if conf["geo"]["enable_grouping"]:
+        if self.enable_grouping:
             yield self.expose_grouped()
             yield self.expose_jail_summary()
         else:
@@ -144,7 +146,7 @@ class F2bCollector(object):
         return gauge
 
 
-if __name__ == "__main__":
+def entrypoint():
     with open("conf.yml") as f:
         conf = yaml.load(f, Loader=yaml.FullLoader)
 
@@ -153,3 +155,7 @@ if __name__ == "__main__":
     app = make_wsgi_app()
     httpd = make_server(conf["server"]["listen_address"], conf["server"]["port"], app)
     httpd.serve_forever()
+
+
+if __name__ == "__main__":
+    entrypoint()

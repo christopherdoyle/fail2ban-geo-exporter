@@ -1,9 +1,12 @@
 import geoip2.database
 
+from .base import BaseProvider
 
-class MaxmindDB:
+
+class MaxmindDB(BaseProvider):
 
     def __init__(self, conf):
+        super().__init__(conf)
         self.db_path = conf["geo"]["maxmind"]["db_path"]
         self.on_error = conf["geo"]["maxmind"].get("on_error", "")
 
