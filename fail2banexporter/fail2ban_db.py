@@ -1,5 +1,8 @@
+import logging
 import pathlib
 import sqlite3
+
+logger = logging.getLogger(__name__)
 
 
 class Fail2BanDatabaseInterface:
@@ -19,11 +22,13 @@ class Fail2BanDatabaseInterface:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.conn is not None:
+            logger.debug("Closing connection")
             self.conn.close()
             self.conn = None
 
     def __del__(self):
         if self.conn is not None:
+            logger.debug("Closing connection")
             self.conn.close()
             self.conn = None
 
