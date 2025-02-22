@@ -4,8 +4,10 @@ import sqlite3
 
 class Fail2BanDatabaseInterface:
 
-    def __init__(self, fpath: pathlib.Path):
-        self.fpath = fpath
+    def __init__(self, fpath: str | pathlib.Path):
+        self.conn = None
+        self.cur = None
+        self.fpath = pathlib.Path(fpath)
         if not self.fpath.is_file():
             raise ValueError("Database file does not exist")
 

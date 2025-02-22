@@ -46,6 +46,11 @@ def mock_fail2ban_sqlite_db(_mock_fail2ban_sqlite_db):
 
 class TestFail2BanDatabaseInterface:
 
+    def test_given_nonexistent_db_file__raises(self, tmp_path):
+        not_a_file = tmp_path / "not_a_file"
+        with pytest.raises(ValueError):
+            fail2ban_db.Fail2BanDatabaseInterface(not_a_file)
+
     def test_empty_db_is_empty(self, mock_fail2ban_sqlite_db):
         db = fail2ban_db.Fail2BanDatabaseInterface(mock_fail2ban_sqlite_db)
         assert db.fetch_active_jails() == []
