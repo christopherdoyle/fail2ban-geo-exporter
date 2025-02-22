@@ -41,7 +41,7 @@ class F2bCollector(object):
         cur = conn.cursor()
 
         config = configparser.ConfigParser()
-        
+
         # Allow both configs for backwards compatibility
         if not self.f2b_conf_path:
             config.read(self.f2b_conf)

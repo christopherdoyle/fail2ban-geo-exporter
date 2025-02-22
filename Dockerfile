@@ -7,4 +7,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD ["python", "./fail2ban-exporter.py"]
+CMD ["python", "fail2banexporter/main.py"]
