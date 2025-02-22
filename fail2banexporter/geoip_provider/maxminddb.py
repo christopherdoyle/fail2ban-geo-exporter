@@ -5,13 +5,8 @@ from .base import BaseProvider
 
 class MaxmindDB(BaseProvider):
 
-    def __init__(self, conf):
-        super().__init__(conf)
-        self.db_path = conf["geo"]["maxmind"]["db_path"]
-        self.on_error = conf["geo"]["maxmind"].get("on_error", "")
-
     def annotate(self, ip):
-        reader = geoip2.database.Reader(self.db_path)
+        reader = geoip2.database.Reader(self.settings.geo.maxmind_dbpath)
         try:
             lookup = reader.city(ip)
             entry = {
@@ -19,18 +14,8 @@ class MaxmindDB(BaseProvider):
                 "latitude": str(lookup.location.latitude),
                 "longitude": str(lookup.location.longitude),
             }
-        except Exception:
-            if not self.on_error:
-                entry = {}
-            else:
-                entry = {
-                    "city": self.on_error.get("city", "not set"),
-                    "latitude": self.on_error.get("latitude", "0"),
-                    "longitude": self.on_error.get("longitude", "0"),
-                }
         finally:
             reader.close()
-
         return entry
 
     def get_labels(self):

@@ -2,12 +2,12 @@ import configparser
 import sqlite3
 from collections import defaultdict
 from dataclasses import dataclass, field
-from pathlib import Path
 from wsgiref.simple_server import make_server
 
-import yaml
 from prometheus_client import make_wsgi_app
 from prometheus_client.core import REGISTRY, GaugeMetricFamily
+
+from .config import Settings
 
 
 @dataclass(slots=True)
@@ -18,18 +18,15 @@ class Jail:
 
 
 class F2bCollector:
-    def __init__(self, conf):
-        self.geo_provider = self._import_provider(conf)
-        self.f2b_conf = conf["f2b"].get("conf", "")
-        self.f2b_conf_path = conf["f2b"].get("conf_path", "")
-        self.f2b_db = conf["f2b"]["db"]
+    def __init__(self, settings: Settings):
+        self.settings = settings
+        self.geo_provider = self._import_provider()
         self.jails = []
         self.extra_labels = sorted(self.geo_provider.get_labels())
-        self.enable_grouping = conf["geo"]["enable_grouping"]
 
-    def _import_provider(self, conf):
-        if conf["geo"]["enabled"]:
-            class_name = conf["geo"]["provider"]
+    def _import_provider(self):
+        if self.settings.geo.enabled:
+            class_name = self.settings.geo.provider
             mod = __import__(
                 "geoip_provider.{}".format(class_name.lower()), fromlist=[class_name]
             )
@@ -38,25 +35,19 @@ class F2bCollector:
             mod = __import__("geoip_provider.base", fromlist=["BaseProvider"])
 
         GeoProvider = getattr(mod, class_name)
-        return GeoProvider(conf)
+        return GeoProvider(self.settings)
 
     def get_jailed_ips(self):
         self.jails.clear()
 
-        conn = sqlite3.connect(self.f2b_db)
+        conn = sqlite3.connect(self.settings.fail2ban.db_path)
         cur = conn.cursor()
 
         config = configparser.ConfigParser()
 
-        # Allow both configs for backwards compatibility
-        if not self.f2b_conf_path:
-            config.read(self.f2b_conf)
-        else:
-            config.read("{}/jail.local".format(self.f2b_conf_path))
-
-        if self.f2b_conf_path:
-            jaild = list(Path("{}/jail.d".format(self.f2b_conf_path)).glob("*.local"))
-            config.read(jaild)
+        config.read(f"{self.settings.fail2ban.conf_path}/jail.local")
+        jaild = list((self.settings.fail2ban.conf_path / "jail.d").glob("*.local"))
+        config.read(jaild)
 
         active_jails = cur.execute(
             "SELECT name FROM jails WHERE enabled = 1"
@@ -89,7 +80,7 @@ class F2bCollector:
         self.get_jailed_ips()
         self.assign_location()
 
-        if self.enable_grouping:
+        if self.settings.geo.enable_grouping:
             yield self.expose_grouped()
             yield self.expose_jail_summary()
         else:
@@ -147,13 +138,11 @@ class F2bCollector:
 
 
 def entrypoint():
-    with open("conf.yml") as f:
-        conf = yaml.load(f, Loader=yaml.FullLoader)
-
-    REGISTRY.register(F2bCollector(conf))
+    settings = Settings()
+    REGISTRY.register(F2bCollector(settings))
 
     app = make_wsgi_app()
-    httpd = make_server(conf["server"]["listen_address"], conf["server"]["port"], app)
+    httpd = make_server(settings.server.listen_address, settings.server.port, app)
     httpd.serve_forever()
 
 
