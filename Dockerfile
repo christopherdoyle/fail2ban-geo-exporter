@@ -1,10 +1,10 @@
-FROM python:3-alpine
+FROM python:3.12-alpine
 
-WORKDIR /f2b-exporter
+WORKDIR /app
 
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY fail2banexporter fail2banexporter/
 
-CMD ["python", "fail2banexporter/main.py"]
+CMD ["python", "-m" , "fail2banexporter.main"]

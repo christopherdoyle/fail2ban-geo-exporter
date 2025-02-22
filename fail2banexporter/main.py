@@ -28,14 +28,14 @@ class F2bCollector:
         if self.settings.geo.enabled:
             class_name = self.settings.geo.provider
             mod = __import__(
-                "geoip_provider.{}".format(class_name.lower()), fromlist=[class_name]
+                f"fail2banexporter.geoip_provider.{class_name.lower()}",
+                fromlist=[class_name],
             )
+            return getattr(mod, class_name)(self.settings)
         else:
-            class_name = "BaseProvider"
-            mod = __import__("geoip_provider.base", fromlist=["BaseProvider"])
+            from fail2banexporter.geoip_provider.base import BaseProvider
 
-        GeoProvider = getattr(mod, class_name)
-        return GeoProvider(self.settings)
+            return BaseProvider(self.settings)
 
     def get_jailed_ips(self):
         self.jails.clear()
