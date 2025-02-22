@@ -1,5 +1,4 @@
 import configparser
-import sqlite3
 from collections import defaultdict
 from dataclasses import dataclass, field
 from wsgiref.simple_server import make_server
@@ -8,9 +7,10 @@ from prometheus_client import make_wsgi_app
 from prometheus_client.core import REGISTRY, GaugeMetricFamily
 
 from .config import Settings
+from .fail2ban_db import Fail2BanDatabaseInterface
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, frozen=True)
 class Jail:
     name: str
     ip_list: list[str] = field(default_factory=list)
@@ -40,36 +40,20 @@ class F2bCollector:
     def get_jailed_ips(self):
         self.jails.clear()
 
-        conn = sqlite3.connect(self.settings.fail2ban.db_path)
-        cur = conn.cursor()
-
         config = configparser.ConfigParser()
-
         config.read(f"{self.settings.fail2ban.conf_path}/jail.local")
         jaild = list((self.settings.fail2ban.conf_path / "jail.d").glob("*.local"))
         config.read(jaild)
 
-        active_jails = cur.execute(
-            "SELECT name FROM jails WHERE enabled = 1"
-        ).fetchall()
-
-        for j in active_jails:
-            jail = Jail(j[0])
-            bantime = config[j[0]]["bantime"].split(";")[0].strip()
-            jail.bantime = int(bantime)
-            self.jails.append(jail)
-
-        for jail in self.jails:
-            rows = cur.execute(
-                "SELECT ip FROM bans "
-                "WHERE DATETIME(timeofban + ?, 'unixepoch') > DATETIME('now') "
-                "AND jail = ?",
-                [jail.bantime, jail.name],
-            ).fetchall()
-            for row in rows:
-                jail.ip_list.append({"ip": row[0]})
-
-        conn.close()
+        with Fail2BanDatabaseInterface(self.settings.fail2ban.db_path) as db:
+            for jail_name in db.fetch_active_jails():
+                bantime = int(config[jail_name]["bantime"].split(";")[0].strip())
+                jail = Jail(
+                    name=jail_name,
+                    ip_list=db.fetch_banned_ips(jail_name, bantime),
+                    bantime=bantime,
+                )
+                self.jails.append(jail)
 
     def assign_location(self):
         for jail in self.jails:
