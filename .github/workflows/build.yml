@@ -25,9 +25,14 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Retreive tag name
+      - name: Retrieve version
         id: get_version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Build and push
         uses: docker/build-push-action@v6
