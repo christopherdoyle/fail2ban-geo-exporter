@@ -69,7 +69,11 @@ class F2bCollector(Collector):
         for jail in self.jails:
             for banned_ip in jail.ip_list:
                 logger.debug("Updating location for %s", banned_ip.ip)
-                banned_ip.extra_data.update(self.geo_provider.annotate(banned_ip.ip))
+                location_info = self.geo_provider.annotate(banned_ip.ip)
+                if location_info is None:
+                    logger.warning("Cannot assign location info for '%s'", banned_ip.ip)
+                else:
+                    banned_ip.extra_data.update(location_info)
 
     def collect(self):
         logger.info("Collecting")

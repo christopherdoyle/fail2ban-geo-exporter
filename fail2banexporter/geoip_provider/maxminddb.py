@@ -1,6 +1,10 @@
+import logging
+
 import geoip2.database
 
 from .base import BaseProvider
+
+logger = logging.getLogger(__name__)
 
 
 class MaxmindDB(BaseProvider):
@@ -14,6 +18,9 @@ class MaxmindDB(BaseProvider):
                 "latitude": str(lookup.location.latitude),
                 "longitude": str(lookup.location.longitude),
             }
+        except Exception:
+            logger.error("Failed to retrieve location for ip '%s'", ip)
+            return None
         finally:
             reader.close()
         return entry
