@@ -45,7 +45,6 @@ def mock_fail2ban_sqlite_db(_mock_fail2ban_sqlite_db):
 
 
 class TestFail2BanDatabaseInterface:
-
     def test_given_nonexistent_db_file__raises(self, tmp_path):
         not_a_file = tmp_path / "not_a_file"
         with pytest.raises(ValueError):

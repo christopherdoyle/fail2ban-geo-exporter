@@ -8,7 +8,6 @@ logger = logging.getLogger(__name__)
 
 
 class MaxmindDB(BaseProvider):
-
     def annotate(self, ip):
         reader = geoip2.database.Reader(self.settings.geo.maxmind_dbpath)
         try:
