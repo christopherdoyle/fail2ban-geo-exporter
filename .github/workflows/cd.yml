@@ -1,0 +1,38 @@
+name: CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  create_tag_release:
+    runs-on: ubuntu-latesst
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Get next version
+        id: get_next_version
+        uses: thenativeweb/get-next-version@main
+        with:
+          prefix: ''
+
+      - name: Update version, tag, commit, push
+        if: ${{ steps.get_next_version.outputs.hasNextVersion == 'true' }}
+        shell: bash
+        run: |
+          NEXT_VERSION=${{ steps.get_next_version.outputs.version }}
+          OLD_VERSION=$(git describe --tags --abbrev=0)
+          sed -i "s/${OLD_VERSION}/${NEXT_VERSION}/g" VERSION
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add VERSION
+          git commit -m "Automated release $NEW_VERSION [skip ci]"
+          git tag $NEXT_VERSION
+          git push origin $NEXT_VERSION
+          git push
