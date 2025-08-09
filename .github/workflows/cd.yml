@@ -1,4 +1,4 @@
-name: CD
+name: cd
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   create_tag_release:
-    runs-on: ubuntu-latesst
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
