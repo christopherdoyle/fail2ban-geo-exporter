@@ -6,7 +6,6 @@ logger = logging.getLogger(__name__)
 
 
 class Fail2BanDatabaseInterface:
-
     def __init__(self, fpath: str | pathlib.Path):
         self.conn = None
         self.cur = None
